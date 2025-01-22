@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -59,8 +61,19 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	//nolint:gosec
 	cmd := exec.Command(h.command[0], args...)
 	if strings.HasPrefix(path, h.rootDir) {
-		cmd.Dir = h.rootDir
-		file = path[len(h.rootDir)+1:]
+		if _, err := os.Stat(h.rootDir + "/go.work"); errors.Is(err, os.ErrNotExist) {
+			cmd.Dir = h.rootDir
+			file = path[len(h.rootDir)+1:]
+		} else {
+			modDir := dir
+			_, err = os.Stat(modDir + "/go.mod")
+			for errors.Is(err, os.ErrNotExist) {
+				modDir = filepath.Dir(modDir)
+				_, err = os.Stat(modDir + "/go.mod")
+			}
+			cmd.Dir = modDir
+			file = path[len(modDir)+1:]
+		}
 	} else {
 		cmd.Dir = dir
 	}
@@ -151,7 +164,11 @@ func (h *langHandler) linter() {
 	}
 }
 
-func (h *langHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handle(
+	ctx context.Context,
+	conn *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result interface{}, err error) {
 	h.logger.DebugJSON("golangci-lint-langserver: request:", req)
 
 	switch req.Method {
@@ -173,10 +190,17 @@ func (h *langHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *json
 		return h.handlerWorkspaceDidChangeConfiguration(ctx, conn, req)
 	}
 
-	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: fmt.Sprintf("method not supported: %s", req.Method)}
+	return nil, &jsonrpc2.Error{
+		Code:    jsonrpc2.CodeMethodNotFound,
+		Message: fmt.Sprintf("method not supported: %s", req.Method),
+	}
 }
 
-func (h *langHandler) handleInitialize(_ context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleInitialize(
+	_ context.Context,
+	conn *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result interface{}, err error) {
 	var params InitializeParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -198,13 +222,21 @@ func (h *langHandler) handleInitialize(_ context.Context, conn *jsonrpc2.Conn, r
 	}, nil
 }
 
-func (h *langHandler) handleShutdown(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleShutdown(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result interface{}, err error) {
 	close(h.request)
 
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidOpen(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleTextDocumentDidOpen(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result interface{}, err error) {
 	var params DidOpenTextDocumentParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -215,15 +247,27 @@ func (h *langHandler) handleTextDocumentDidOpen(_ context.Context, _ *jsonrpc2.C
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidClose(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleTextDocumentDidClose(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result interface{}, err error) {
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidChange(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleTextDocumentDidChange(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result interface{}, err error) {
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidSave(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handleTextDocumentDidSave(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result interface{}, err error) {
 	var params DidSaveTextDocumentParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -234,6 +278,10 @@ func (h *langHandler) handleTextDocumentDidSave(_ context.Context, _ *jsonrpc2.C
 	return nil, nil
 }
 
-func (h *langHandler) handlerWorkspaceDidChangeConfiguration(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *langHandler) handlerWorkspaceDidChangeConfiguration(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result interface{}, err error) {
 	return nil, nil
 }
