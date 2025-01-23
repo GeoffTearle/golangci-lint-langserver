@@ -60,8 +60,11 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	args = append(args, dir)
 	//nolint:gosec
 	cmd := exec.Command(h.command[0], args...)
+	var hasGoWork bool
 	if strings.HasPrefix(path, h.rootDir) {
-		if _, err := os.Stat(h.rootDir + "/go.work"); errors.Is(err, os.ErrNotExist) {
+		_, err := os.Stat(h.rootDir + "/go.work")
+		hasGoWork = !errors.Is(err, os.ErrNotExist)
+		if !hasGoWork {
 			cmd.Dir = h.rootDir
 			file = path[len(h.rootDir)+1:]
 		} else {
@@ -72,7 +75,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 				_, err = os.Stat(modDir + "/go.mod")
 			}
 			cmd.Dir = modDir
-			file = path[len(modDir)+1:]
+			file = path[len(modDir):]
 		}
 	} else {
 		cmd.Dir = dir
