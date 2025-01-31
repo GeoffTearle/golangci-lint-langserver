@@ -75,7 +75,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 				_, err = os.Stat(modDir + "/go.mod")
 			}
 			cmd.Dir = modDir
-			file = path[len(modDir):]
+			file = path[len(modDir)+1:]
 		}
 	} else {
 		cmd.Dir = dir
