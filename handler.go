@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/sourcegraph/jsonrpc2"
 )
@@ -57,12 +56,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	args = append(args, h.command[1:]...)
 	args = append(args, dir)
 	cmd := exec.Command(h.command[0], args...)
-	if strings.HasPrefix(path, h.rootDir) {
-		cmd.Dir = h.rootDir
-		file = path[len(h.rootDir)+1:]
-	} else {
-		cmd.Dir = dir
-	}
+	cmd.Dir = dir
 
 	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint cmd:", cmd.Args)
 
@@ -151,7 +145,11 @@ func (h *langHandler) linter() {
 	}
 }
 
-func (h *langHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handle(
+	ctx context.Context,
+	conn *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result any, err error) {
 	h.logger.DebugJSON("golangci-lint-langserver: request:", req)
 
 	switch req.Method {
@@ -173,10 +171,17 @@ func (h *langHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *json
 		return h.handlerWorkspaceDidChangeConfiguration(ctx, conn, req)
 	}
 
-	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: fmt.Sprintf("method not supported: %s", req.Method)}
+	return nil, &jsonrpc2.Error{
+		Code:    jsonrpc2.CodeMethodNotFound,
+		Message: fmt.Sprintf("method not supported: %s", req.Method),
+	}
 }
 
-func (h *langHandler) handleInitialize(_ context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleInitialize(
+	_ context.Context,
+	conn *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result any, err error) {
 	var params InitializeParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -198,13 +203,21 @@ func (h *langHandler) handleInitialize(_ context.Context, conn *jsonrpc2.Conn, r
 	}, nil
 }
 
-func (h *langHandler) handleShutdown(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleShutdown(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result any, err error) {
 	close(h.request)
 
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidOpen(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleTextDocumentDidOpen(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result any, err error) {
 	var params DidOpenTextDocumentParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -215,15 +228,27 @@ func (h *langHandler) handleTextDocumentDidOpen(_ context.Context, _ *jsonrpc2.C
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidClose(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleTextDocumentDidClose(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result any, err error) {
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidChange(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleTextDocumentDidChange(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result any, err error) {
 	return nil, nil
 }
 
-func (h *langHandler) handleTextDocumentDidSave(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handleTextDocumentDidSave(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	req *jsonrpc2.Request,
+) (result any, err error) {
 	var params DidSaveTextDocumentParams
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
@@ -234,6 +259,10 @@ func (h *langHandler) handleTextDocumentDidSave(_ context.Context, _ *jsonrpc2.C
 	return nil, nil
 }
 
-func (h *langHandler) handlerWorkspaceDidChangeConfiguration(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
+func (h *langHandler) handlerWorkspaceDidChangeConfiguration(
+	_ context.Context,
+	_ *jsonrpc2.Conn,
+	_ *jsonrpc2.Request,
+) (result any, err error) {
 	return nil, nil
 }
