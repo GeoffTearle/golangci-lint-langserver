@@ -50,7 +50,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	diagnostics := make([]Diagnostic, 0)
 
 	path := uriToPath(string(uri))
-	dir, file := filepath.Split(path)
+	dir, _ := filepath.Split(path)
 
 	args := make([]string, 0, len(h.command))
 	args = append(args, h.command[1:]...)
@@ -59,6 +59,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	cmd.Dir = dir
 
 	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint cmd:", cmd.Args)
+	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint dir:", cmd.Dir)
 
 	b, err := cmd.Output()
 	if err == nil {
@@ -77,9 +78,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	h.logger.DebugJSON("golangci-lint-langserver: result:", result)
 
 	for _, issue := range result.Issues {
-		issue := issue
-
-		if file != issue.Pos.Filename {
+		if path != issue.Pos.Filename {
 			continue
 		}
 
