@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/sourcegraph/jsonrpc2"
 )
@@ -51,15 +52,22 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 
 	path := uriToPath(string(uri))
 	dir, _ := filepath.Split(path)
+	file := path
 
 	args := make([]string, 0, len(h.command))
 	args = append(args, h.command[1:]...)
 	args = append(args, dir)
+
 	cmd := exec.Command(h.command[0], args...)
 	cmd.Dir = dir
 
+	if strings.HasPrefix(path, h.rootDir) {
+		file = path[len(h.rootDir)+1:]
+	}
+
 	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint cmd:", cmd.Args)
 	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint dir:", cmd.Dir)
+	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint file:", file)
 
 	b, err := cmd.Output()
 	if err == nil {
@@ -78,7 +86,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	h.logger.DebugJSON("golangci-lint-langserver: result:", result)
 
 	for _, issue := range result.Issues {
-		if path != issue.Pos.Filename {
+		if file != issue.Pos.Filename {
 			continue
 		}
 
